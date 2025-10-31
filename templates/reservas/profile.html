@@ -1,0 +1,103 @@
+{% extends "reservas/base_inovadanca.html" %}
+{% load static %}
+
+{% block title %}Meu Perfil — InovaDança{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row g-4 align-items-start">
+
+    <!-- 📸 COLUNA ESQUERDA — Perfil -->
+    <div class="col-12 col-lg-4">
+      <div class="card shadow border-0 p-4 text-center" style="border-radius:18px;">
+
+        <!-- FOTO -->
+        <div class="position-relative mx-auto mb-3" style="width:160px;">
+          {% if profile.photo %}
+            <img src="{{ profile.photo.url }}" alt="Foto de perfil"
+                 class="rounded-circle shadow-sm w-100" style="object-fit:cover; border:4px solid #0BAFEE;">
+          {% else %}
+            <img src="{% static 'img/default_user.png' %}" alt="Sem foto"
+                 class="rounded-circle shadow-sm w-100" style="object-fit:cover; opacity:.85;">
+          {% endif %}
+
+          <!-- Botão alterar -->
+          <label for="photoUpload" class="btn btn-sm btn-primary position-absolute bottom-0 start-0"
+                 style="border-radius:12px; font-size:0.8rem;">
+            <i class="bi bi-camera"></i> Alterar
+          </label>
+
+          <!-- Botão remover -->
+          {% if profile.photo %}
+          <form method="post" action="{% url 'profile' %}" class="position-absolute bottom-0 end-0">
+            {% csrf_token %}
+            <button type="submit" name="remove_photo"
+                    class="btn btn-sm btn-danger" style="border-radius:12px; font-size:0.8rem;">
+              <i class="bi bi-trash"></i> Remover
+            </button>
+          </form>
+          {% endif %}
+        </div>
+
+        <!-- Upload automático -->
+        <form method="post" enctype="multipart/form-data" id="photoForm" class="d-none">
+          {% csrf_token %}
+          <input type="file" name="photo" id="photoUpload" accept="image/*" onchange="this.form.submit()">
+        </form>
+
+        <!-- INFO BÁSICA -->
+        <h5 class="fw-bold text-primary mt-3">{{ user.get_full_name|default:user.username }}</h5>
+        <p class="text-muted small mb-2"><i class="bi bi-envelope"></i> {{ user.email|default:"Sem e-mail" }}</p>
+        <p class="text-muted small mb-0"><i class="bi bi-telephone"></i> {{ profile.phone|default:"Sem telefone" }}</p>
+      </div>
+    </div>
+
+    <!-- 🗓️ COLUNA DIREITA — Agenda -->
+    <div class="col-12 col-lg-8">
+      <div class="card shadow border-0 p-3" style="border-radius:18px;">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5 class="fw-bold text-primary mb-0">📅 Programação de Aulas</h5>
+          <small class="text-muted">Semana atual</small>
+        </div>
+
+        <div id="calendar" style="min-height:500px;"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- JS do calendário -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var calendarEl = document.getElementById('calendar');
+  var calendar = new FullCalendar.Calendar(calendarEl, {
+    locale: 'pt-br',
+    initialView: 'timeGridWeek',
+    height: 'auto',
+    slotMinTime: "07:00:00",
+    slotMaxTime: "23:00:00",
+    nowIndicator: true,
+    allDaySlot: false,
+    headerToolbar: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'timeGridWeek,timeGridDay'
+    },
+    events: function(info, success, failure) {
+      fetch(`/api/admin-events/?user={{ user.id }}`)
+        .then(r => r.json())
+        .then(data => success(data))
+        .catch(failure);
+    },
+    eventContent: function(arg) {
+      let div = document.createElement('div');
+      div.innerHTML = `<strong>${arg.event.title}</strong><br><small>${arg.event.extendedProps.room_name || ''}</small>`;
+      return { domNodes: [div] };
+    }
+  });
+  calendar.render();
+});
+</script>
+{% endblock %}

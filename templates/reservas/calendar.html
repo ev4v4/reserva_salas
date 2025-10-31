@@ -1,0 +1,512 @@
+{% extends "reservas/base_inovadanca.html" %}
+{% load static %}
+
+{% block title %}InovaDança — Agenda{% endblock %}
+
+{% block content %}
+<!-- ✅ HEADER INOVADANÇA -->
+<div class="d-flex align-items-center justify-content-between mb-3 p-3 bg-white rounded shadow-sm" id="header-inovadanca">
+  <div class="d-flex align-items-center">
+    <img src="{% static 'img/inovadanca_logo.png' %}" alt="Inovadança" height="48" class="me-3">
+    <div>
+      <h5 class="mb-0 fw-bold text-primary" id="greeting-text">Olá, {{ user.first_name|default:user.username }}</h5>
+      <small class="text-muted">O que você vai fazer hoje?</small>
+    </div>
+  </div>
+  <div>
+    <span class="badge bg-light text-dark" id="current-date"></span>
+  </div>
+  {% if is_staff_like %}
+  <div class="mt-2 text-end">
+    <a href="{% url 'admin_panel' %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-gear-fill me-1"></i> Painel Administrativo
+    </a>
+  </div>
+{% endif %}
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-lg-3">
+    <div class="p-3 border rounded bg-white shadow-sm">
+      <label class="form-label mb-1">Sala</label>
+      <select id="select-sala" class="form-select">
+        {% for r in rooms %}
+          <option value="{{ r.slug }}" {% if forloop.first %}selected{% endif %}>{{ r.name }}</option>
+        {% endfor %}
+      </select>
+      <div class="small text-muted mt-2">Visualização semanal • intervalos de 30 min</div>
+      <hr>
+      <button class="btn btn-primary w-100" id="btnNovaReservaSide" type="button">Nova Reserva</button>
+    </div>
+  
+    <!-- ✅ Bloco de Avisos -->
+    <div class="p-3 border rounded bg-white shadow-sm mt-3">
+      <h6 class="fw-bold text-primary mb-2">
+        <i class="bi bi-megaphone-fill me-1"></i> Avisos
+      </h6>
+  
+      {% if avisos %}
+        {% for aviso in avisos %}
+          <div class="mb-3">
+            <strong class="d-block">{{ aviso.titulo }}</strong>
+            {% if aviso.tipo == 'texto' %}
+              <p class="small text-muted mb-1">{{ aviso.corpo|truncatechars:100 }}</p>
+            {% else %}
+              <img src="{{ aviso.imagem.url }}" class="img-fluid rounded" alt="Aviso">
+            {% endif %}
+            <small class="text-muted">{{ aviso.criado_em|date:"d/m/Y" }}</small>
+            {% if not forloop.last %}<hr class="my-2">{% endif %}
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="text-muted small mb-0">Nenhum aviso no momento.</p>
+      {% endif %}
+    </div>
+  </div>
+    <!-- ✅ Coluna da direita: Calendário -->
+    <div class="col-12 col-lg-9">
+      <div class="p-3 border rounded bg-white shadow-sm">
+        <div id="calendar"></div>  <!-- Aqui o FullCalendar é desenhado -->
+      </div>
+    </div>
+  </div> <!-- ✅ fecha o .row g-3 -->
+  
+  
+
+<!-- FAB -->
+<!-- ✅ FAB melhorado -->
+<div class="fab shadow-lg" id="btnNovaReservaFab" title="Nova Reserva">
+  <i class="bi bi-plus-lg"></i>
+</div>
+
+
+<!-- ✅ Modal Nova Reserva -->
+<div class="modal fade" id="reserveModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="reserveForm" method="post" action="{% url 'reserve' %}">
+      {% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Nova Reserva</h5>
+          <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" name="room_slug" id="form_room_slug">
+          <div class="mb-2">
+            <label class="form-label">Data</label>
+            <input class="form-control" type="date" name="date" id="form_date" required>
+          </div>
+          {% if is_staff_like %}
+          <div class="mb-3">
+            <label class="form-label">Tipo de reserva</label>
+            <select class="form-select" id="select-reserve-type" name="reserve_type">
+              <option value="self">Para mim</option>
+              <option value="teacher">Professor da academia</option>
+              <option value="external">Cliente externo</option>
+            </select>
+          </div>
+
+          <div class="mb-3" id="group-teacher" style="display:none;">
+            <label class="form-label">Professor</label>
+            <select class="form-select" name="user_id">
+              <option value="">Selecione o professor</option>
+              {% for u in users %}
+                <option value="{{ u.id }}">{{ u.get_full_name|default:u.username }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3" id="group-external" style="display:none;">
+            <label class="form-label">Responsável</label>
+            <input type="text" class="form-control" name="external_name" placeholder="Nome do responsável">
+
+            <label class="form-label mt-2">Telefone</label>
+            <input type="text" class="form-control" name="external_phone" placeholder="WhatsApp">
+          </div>
+          {% endif %}
+
+          <div class="mb-2">
+            <label class="form-label">Duração (min)</label>
+            <input class="form-control" type="number" name="duration_min" id="form_duration" value="60" min="30" step="30" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Horário de início (disponíveis)</label>
+            <select class="form-select" name="start_time" id="form_start_time" required>
+              <option value="">Escolha data/sala/duração</option>
+            </select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Recorrência (opcional)</label>
+            <select class="form-select" name="recurrence_rule" id="form_rrule">
+              <option value="">Sem recorrência</option>
+              <option value="FREQ=WEEKLY">Toda semana</option>
+              <option value="FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR">Seg a Sex</option>
+              <option value="FREQ=DAILY">Todos os dias</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Fechar</button>
+          <button class="btn btn-primary" type="submit">Reservar</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ✅ Modal Detalhes Evento -->
+<div class="modal fade" id="eventModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="cancelForm" method="post" action="{% url 'cancel_reservation' %}">
+      {% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Detalhes da Reserva</h5>
+          <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" name="reservation_id" id="cancel_reservation_id">
+          <div class="mb-2"><strong>Nome:</strong> <span id="ev_name"></span></div>
+          <div class="mb-2"><strong>Telefone:</strong> <span id="ev_phone"></span></div>
+          <div class="mb-2"><strong>Sala:</strong> <span id="ev_room"></span></div>
+          <div class="mb-2"><strong>Início:</strong> <span id="ev_start"></span></div>
+          <div class="mb-2"><strong>Término:</strong> <span id="ev_end"></span></div>
+          <hr>
+          <div class="mb-2">
+            <label class="form-label">Cancelar</label>
+            <select class="form-select" name="mode" id="cancel_mode">
+              <option value="single">Apenas este dia</option>
+              <option value="all">Toda a recorrência</option>
+            </select>
+          </div>
+          <div class="mb-2" id="cancel_date_group">
+            <label class="form-label">Data desta ocorrência</label>
+            <input class="form-control" type="date" name="date" id="cancel_date">
+          </div>
+          <div class="alert alert-warning small">
+            Atenção: cancelar toda a recorrência remove todos os próximos eventos desta série.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Fechar</button>
+          <button class="btn btn-danger" type="submit" id="btnConfirmCancel">Confirmar Cancelamento</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/locales/pt-br.js"></script>
+<script>
+(function(){
+
+  function getCookie(name){
+    var v=null, c=document.cookie;
+    if(c && c!==''){
+      c=c.split(';');
+      for(var i=0;i<c.length;i++){
+        var x=c[i].trim();
+        if(x.startsWith(name+'=')) v=decodeURIComponent(x.slice(name.length+1));
+      }
+    }
+    return v;
+  }
+
+  var csrftoken = getCookie('csrftoken');
+  var calendarEl = document.getElementById('calendar');
+  var roomSelect = document.getElementById('select-sala');
+  var reserveModal = new bootstrap.Modal(document.getElementById('reserveModal'));
+  var eventModal = new bootstrap.Modal(document.getElementById('eventModal'));
+  var btnSide = document.getElementById('btnNovaReservaSide');
+  var btnFab = document.getElementById('btnNovaReservaFab');
+  var currentRoom = roomSelect.value;
+
+
+  // ✅ FULLCALENDAR CONFIG
+  var calendar = new FullCalendar.Calendar(calendarEl, {
+    locale: 'pt-br',
+    initialView: 'timeGridWeek',
+    slotDuration: '00:30:00',
+    nowIndicator: true,
+    allDaySlot: false,
+    height: 'auto',
+    firstDay: 1,
+    expandRows: true,
+    slotMinTime: "00:00:00",
+    slotMaxTime: "24:00:00",
+
+    headerToolbar: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'timeGridWeek,timeGridDay'
+    },
+
+    titleFormat: { year: 'numeric', month: 'long', day: 'numeric' },
+
+
+    // ✅ Evento com as classes de sala e "mine"
+    events: function(info, success, failure){
+      var params = new URLSearchParams();
+      params.set('start', info.startStr);
+      params.set('end', info.endStr);
+      params.set('room', currentRoom);
+
+      fetch('/api/events/?'+params.toString())
+        .then(r => r.json())
+        .then(data => {
+
+          data.forEach(ev=>{
+            ev.classNames = [];
+            ev.extendedProps = ev.extendedProps || {};
+
+            if (ev.room_slug) {
+              ev.classNames.push(ev.room_slug);
+            }
+            if (ev.extendedProps.mine) {
+              ev.classNames.push('mine');
+            }
+            ev.display = 'block';
+          });
+
+          success(data);
+        })
+        .catch(err => {
+          console.error(err);
+          failure(err);
+        });
+    },
+
+
+    eventContent: function(arg){
+      var div = document.createElement('div');
+      div.style.fontSize = "0.90rem";
+      div.style.fontWeight = "600";
+      div.textContent = arg.event.title || '';
+      return { domNodes:[div] };
+    },
+
+
+    eventClick: function(info){
+      var e = info.event;
+      var s = new Date(e.start);
+      var f = new Date(e.end);
+      var pad = n => String(n).padStart(2,'0');
+
+      document.getElementById('cancel_reservation_id').value = e.id;
+      document.getElementById('ev_name').textContent = e.extendedProps.full_name || e.title;
+      document.getElementById('ev_phone').textContent = e.extendedProps.phone || '-';
+      document.getElementById('ev_room').textContent = e.extendedProps.room_name || e.extendedProps.room;
+      document.getElementById('ev_start').textContent = pad(s.getHours())+":"+pad(s.getMinutes());
+      document.getElementById('ev_end').textContent   = pad(f.getHours())+":"+pad(f.getMinutes());
+
+      var yyyy=s.getFullYear(), mm=pad(s.getMonth()+1), dd=pad(s.getDate());
+      document.getElementById('cancel_date').value = yyyy+'-'+mm+'-'+dd;
+
+      var canCancel = e.extendedProps.can_cancel;
+      document.getElementById('btnConfirmCancel').disabled = !canCancel;
+
+      var modeSelect=document.getElementById('cancel_mode');
+      var dateGroup=document.getElementById('cancel_date_group');
+      modeSelect.value='single'; dateGroup.style.display='';
+      modeSelect.onchange = ()=> dateGroup.style.display = (modeSelect.value==='single')?'':'none';
+
+      eventModal.show();
+    },
+
+    // ✅ Clique em um horário vazio → abre o modal de reserva já preenchido
+    dateClick: function(info) {
+      // Evita conflito com toques em eventos
+      if (info.jsEvent && info.jsEvent.target.closest('.fc-event')) return;
+
+      const clickedDate = new Date(info.date);
+      const yyyy = clickedDate.getFullYear();
+      const mm = String(clickedDate.getMonth() + 1).padStart(2, '0');
+      const dd = String(clickedDate.getDate()).padStart(2, '0');
+      const hh = String(clickedDate.getHours()).padStart(2, '0');
+      const min = String(clickedDate.getMinutes()).padStart(2, '0');
+
+      // Preenche os campos principais
+      document.getElementById('form_room_slug').value = currentRoom;
+      document.getElementById('form_date').value = `${yyyy}-${mm}-${dd}`;
+
+      // Atualiza os horários disponíveis antes de abrir o modal
+      carregarDisponibilidade();
+
+      // Define o horário clicado no select, se existir
+      setTimeout(() => {
+        const select = document.getElementById('form_start_time');
+        for (const option of select.options) {
+          if (option.value === `${hh}:${min}`) {
+            select.value = option.value;
+            break;
+          }
+        }
+      }, 400);
+
+      // Scrolla pro topo no mobile (garante que o modal apareça totalmente visível)
+      if (window.innerWidth < 768) window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      // Exibe o modal
+      reserveModal.show();
+    }
+
+    
+  });
+
+      // Controle dos campos extra
+      var reserveType = document.getElementById('select-reserve-type');
+      var groupTeacher = document.getElementById('group-teacher');
+      var groupExternal = document.getElementById('group-external');
+
+      if (reserveType) {
+        reserveType.addEventListener('change', function(){
+          groupTeacher.style.display = (this.value === 'teacher') ? '' : 'none';
+          groupExternal.style.display = (this.value === 'external') ? '' : 'none';
+        });
+      }
+
+
+  calendar.render();
+
+ // ======================
+  // ✅ Envio da nova reserva via AJAX (corrigido)
+  // ======================
+  var form = document.getElementById('reserveForm');
+
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const fd = new FormData(this);
+
+    fetch('/reserve/', {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrftoken,
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: fd
+    })
+    .then(async r => {
+      // tenta converter em JSON
+      const data = await r.json().catch(() => ({}));
+
+      if (r.ok && (data.ok || data.success)) {
+        // ✅ feedback visual
+        if (typeof showToast === 'function') {
+          showToast('✅ Reserva criada com sucesso!', 'success');
+        } else {
+          alert('Reserva criada com sucesso!');
+        }
+
+        // ✅ Fecha modal
+        reserveModal.hide();
+
+        // ✅ Limpa campos
+        form.reset();
+
+        // ✅ Atualiza calendário (sem recarregar página)
+        setTimeout(() => calendar.refetchEvents(), 700);
+      } else {
+        const msg = data.error || '❌ Erro ao criar reserva';
+        if (typeof showToast === 'function') {
+          showToast(msg, 'error');
+        } else {
+          alert(msg);
+        }
+      }
+    })
+    .catch(() => {
+      if (typeof showToast === 'function') {
+        showToast('Falha de comunicação com o servidor.', 'error');
+      } else {
+        alert('Falha de comunicação com o servidor.');
+      }
+    });
+  });
+
+  roomSelect.addEventListener('change', function(){
+    currentRoom = this.value;
+    calendar.refetchEvents();
+  });
+
+  btnSide.addEventListener('click', openReserve);
+  btnFab.addEventListener('click', openReserve);
+
+  function openReserve(){
+    document.getElementById('form_room_slug').value = currentRoom;
+    document.getElementById('form_date').value='';
+    document.getElementById('form_start_time').innerHTML='<option value="">Escolha data/sala/duração</option>';
+    reserveModal.show();
+  }
+
+
+  function carregarDisponibilidade(){
+    var date = document.getElementById('form_date').value;
+    var room = document.getElementById('form_room_slug').value;
+    var duration = document.getElementById('form_duration').value;
+    var select = document.getElementById('form_start_time');
+    if (!date || !room || !duration){
+      select.innerHTML='<option value="">Selecione tudo</option>';
+      return;
+    }
+    select.innerHTML='<option>Carregando...</option>';
+
+    fetch('/api/availability/', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':csrftoken},
+      body:JSON.stringify({date:date,room_slug:room,duration_min:Number(duration)})
+    })
+    .then(r=>r.json()).then(data=>{
+      select.innerHTML='';
+      if(!data.available.length){
+        select.innerHTML='<option value="">Sem horários</option>'; return;
+      }
+      var opt=document.createElement('option'); opt.value=''; opt.textContent='-- selecione --';
+      select.appendChild(opt);
+      data.available.forEach(h=>{
+        var o=document.createElement('option'); o.value=h; o.textContent=h;
+        select.appendChild(o);
+      });
+    })
+    .catch(()=>{
+      select.innerHTML='<option value="">Erro ao carregar</option>';
+    });
+  }
+  document.getElementById('form_date').addEventListener('change', carregarDisponibilidade);
+  document.getElementById('form_duration').addEventListener('change', carregarDisponibilidade);
+
+  })();
+</script>
+<!-- ✅ SCRIPT DE SAUDAÇÃO E DATA (corrigido) -->
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const now = new Date();
+    const hours = now.getHours();
+    const greetingText = document.getElementById('greeting-text');
+    const dateLabel = document.getElementById('current-date');
+  
+    // Pega o nome já exibido pelo Django
+    const userName = greetingText.textContent.replace(/^Olá,\s*/, '').trim() || 'Visitante';
+  
+    // Saudação baseada na hora do dia
+    let greeting = 'Olá';
+    if (hours < 12) greeting = 'Bom dia';
+    else if (hours < 18) greeting = 'Boa tarde';
+    else greeting = 'Boa noite';
+  
+    greetingText.textContent = `${greeting}, ${userName}!`;
+  
+    // Formata a data (ex: 30 de outubro, quinta-feira)
+    const dias = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+    const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    dateLabel.textContent = `${now.getDate()} de ${meses[now.getMonth()]}, ${dias[now.getDay()]}`;
+  });
+  </script>
+  
+  
+{% endblock %}

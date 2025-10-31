@@ -1,0 +1,265 @@
+{% extends "reservas/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="row g-3 align-items-stretch">
+  <div class="col-12 col-lg-3">
+    <div class="room-select-container">
+      <label class="form-label mb-1">Sala</label>
+      <select class="form-select" id="roomSelect">
+        {% for r in rooms %}
+          <option value="{{ r.slug }}" {% if forloop.first %}selected{% endif %}>{{ r.name }}</option>
+        {% endfor %}
+      </select>
+      <div class="mt-2 small text-muted">
+        Visualização semanal • slots de 30 min
+      </div>
+      <hr>
+      <button class="btn btn-primary w-100" id="btnNewReservation" type="button">Nova Reserva</button>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-9">
+    <div id="calendar"></div>
+  </div>
+</div>
+
+<!-- Modal: Nova Reserva -->
+<div class="modal fade" id="reserveModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="reserveForm" method="post" action="{% url 'reserve' %}">
+      {% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Nova Reserva</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" name="room_slug" id="form_room_slug">
+          <div class="mb-2">
+            <label class="form-label">Data</label>
+            <input class="form-control" type="date" name="date" id="form_date" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Duração (min)</label>
+            <input class="form-control" type="number" name="duration_min" id="form_duration" value="60" min="30" step="30" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Horário de início (disponíveis)</label>
+            <select class="form-select" name="start_time" id="form_start_time" required>
+              <option value="">Escolha data/sala/duração</option>
+            </select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Recorrência (opcional)</label>
+            <select class="form-select" name="recurrence_rule" id="form_rrule">
+                <option value="">Sem recorrência</option>
+                <option value="FREQ=WEEKLY">Toda semana</option>
+                <option value="FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR">Seg a Sex</option>
+                <option value="FREQ=DAILY">Todos os dias</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Fechar</button>
+          <button class="btn btn-primary" type="submit">Reservar</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Detalhes/Cancelar -->
+<div class="modal fade" id="eventModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="cancelForm" method="post" action="{% url 'cancel_reservation' %}">
+      {% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Detalhes da Reserva</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" name="reservation_id" id="cancel_reservation_id">
+          <div class="mb-2"><strong>Nome:</strong> <span id="ev_name"></span></div>
+          <div class="mb-2"><strong>Telefone:</strong> <span id="ev_phone"></span></div>
+          <div class="mb-2"><strong>Sala:</strong> <span id="ev_room"></span></div>
+          <div class="mb-2"><strong>Início:</strong> <span id="ev_start"></span></div>
+          <div class="mb-2"><strong>Término:</strong> <span id="ev_end"></span></div>
+          <hr>
+          <div class="mb-2">
+            <label class="form-label">Cancelar</label>
+            <select class="form-select" name="mode" id="cancel_mode">
+              <option value="single">Apenas este dia</option>
+              <option value="all">Toda a recorrência</option>
+            </select>
+          </div>
+          <div class="mb-2" id="cancel_date_group">
+            <label class="form-label">Data desta ocorrência</label>
+            <input class="form-control" type="date" name="date" id="cancel_date">
+          </div>
+          <div class="alert alert-warning small">
+            Atenção: cancelar toda a recorrência remove todos os próximos eventos desta série.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Fechar</button>
+          <button class="btn btn-danger" type="submit" id="btnConfirmCancel">Confirmar Cancelamento</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+  // CSRF helper
+  function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      var cookies = document.cookie.split(';');
+      for (var i = 0; i < cookies.length; i++) {
+        var cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1)); break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+  var csrftoken = getCookie('csrftoken');
+
+  var roomSelect = document.getElementById('roomSelect');
+  var calendarEl = document.getElementById('calendar');
+  var reserveModal = new bootstrap.Modal(document.getElementById('reserveModal'));
+  var eventModal = new bootstrap.Modal(document.getElementById('eventModal'));
+  var fab = document.getElementById('fabReserve');
+  var btnNewReservation = document.getElementById('btnNewReservation');
+
+  var currentRoom = roomSelect.value;
+
+  // FullCalendar
+  var calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: 'timeGridWeek',
+    slotDuration: '00:30:00',
+    allDaySlot: false,
+    nowIndicator: true,
+    height: 'auto',
+    headerToolbar: { left: 'prev,next today', center: 'title', right: 'timeGridWeek,timeGridDay' },
+    events: function(info, success, failure) {
+      var params = new URLSearchParams();
+      params.set('start', info.startStr);
+      params.set('end', info.endStr);
+      if (currentRoom) params.set('room', currentRoom);
+      fetch('/api/events/?' + params.toString())
+        .then(function(r){ return r.json(); })
+        .then(function(data){ success(data); })
+        .catch(function(err){ console.error(err); failure(err); });
+    },
+    eventContent: function(arg) {
+      // Render: só o title (nome curto)
+      var el = document.createElement('div');
+      el.textContent = arg.event.title || '';
+      return { domNodes: [el] };
+    },
+    eventClick: function(info) {
+      // Preenche modal de detalhes
+      var e = info.event;
+      document.getElementById('cancel_reservation_id').value = e.id;
+      document.getElementById('ev_name').textContent = (e.extendedProps.full_name || e.title || '');
+      document.getElementById('ev_phone').textContent = (e.extendedProps.phone || '-');
+      document.getElementById('ev_room').textContent = (e.extendedProps.room_name || e.extendedProps.room || '');
+      var s = new Date(e.start);
+      var f = new Date(e.end);
+      var pad = function(n){ return String(n).padStart(2,'0'); };
+      document.getElementById('ev_start').textContent = pad(s.getHours())+':'+pad(s.getMinutes());
+      document.getElementById('ev_end').textContent   = pad(f.getHours())+':'+pad(f.getMinutes());
+
+      // Data desta ocorrência (para cancelamento single)
+      var yyyy = s.getFullYear(), mm = pad(s.getMonth()+1), dd = pad(s.getDate());
+      document.getElementById('cancel_date').value = yyyy+'-'+mm+'-'+dd;
+
+      // Permissão
+      var canCancel = e.extendedProps && e.extendedProps.can_cancel;
+      document.getElementById('btnConfirmCancel').disabled = !canCancel;
+
+      // Alterna campo de data conforme modo
+      var modeSelect = document.getElementById('cancel_mode');
+      var dateGroup = document.getElementById('cancel_date_group');
+      modeSelect.value = 'single';
+      dateGroup.style.display = '';
+      modeSelect.onchange = function(){
+        dateGroup.style.display = (this.value === 'single') ? '' : 'none';
+      };
+
+      eventModal.show();
+    }
+  });
+  calendar.render();
+
+  // Alterar sala (dropdown)
+  roomSelect.addEventListener('change', function(){
+    currentRoom = this.value;
+    calendar.refetchEvents();
+  });
+
+  // Abrir modal de reserva (FAB e botão lateral)
+  function openReserve() {
+    var now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('form_room_slug').value = currentRoom;
+    document.getElementById('form_date').min = now.toISOString().slice(0,10);
+    document.getElementById('form_date').value = '';
+    document.getElementById('form_duration').value = 60;
+    document.getElementById('form_start_time').innerHTML = '<option value="">Escolha data/sala/duração</option>';
+    document.getElementById('form_rrule').value = '';
+    reserveModal.show();
+  }
+  fab.addEventListener('click', openReserve);
+  btnNewReservation.addEventListener('click', openReserve);
+
+  // Disponibilidade via API
+  function carregarDisponibilidade() {
+    var date = document.getElementById('form_date').value;
+    var room = document.getElementById('form_room_slug').value;
+    var duration = document.getElementById('form_duration').value;
+    var select = document.getElementById('form_start_time');
+
+    if (!date || !room || !duration) {
+      select.innerHTML = '<option value="">Escolha data/sala/duração</option>';
+      return;
+    }
+    select.innerHTML = '<option>Carregando...</option>';
+
+    fetch('/api/availability/', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'X-CSRFToken': csrftoken },
+      body: JSON.stringify({ date: date, room_slug: room, duration_min: Number(duration) })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      select.innerHTML = '';
+      if (!data.available || data.available.length === 0) {
+        select.innerHTML = '<option value="">Sem horários disponíveis</option>';
+        return;
+      }
+      var opt = document.createElement('option'); opt.value=''; opt.textContent='-- selecione --';
+      select.appendChild(opt);
+      for (var i=0;i<data.available.length;i++) {
+        var h = data.available[i];
+        var o = document.createElement('option');
+        o.value = h; o.textContent = h;
+        select.appendChild(o);
+      }
+    })
+    .catch(function(e){
+      console.error(e);
+      select.innerHTML = '<option value="">Erro ao carregar</option>';
+    });
+  }
+  document.getElementById('form_date').addEventListener('change', carregarDisponibilidade);
+  document.getElementById('form_duration').addEventListener('change', carregarDisponibilidade);
+})();
+</script>
+{% endblock %}

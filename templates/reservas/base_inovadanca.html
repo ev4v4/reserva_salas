@@ -1,0 +1,152 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}InovaDança{% endblock %}</title>
+
+  <!-- ✅ Bootstrap CSS sem integrity -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Ícones -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- FullCalendar -->
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/main.min.css" rel="stylesheet">
+
+  <!-- Tema Inova -->
+  <link rel="stylesheet" href="{% static 'css/inovadanca.css' %}">
+
+  <style>
+    body { background:#fff; }
+    .navbar-custom{ background:#0BAFEE!important; color:#fff!important; }
+    .navbar-custom .btn{ color:#000000!important; }
+    .content-container{ padding-top:80px; max-width:1200px; margin:auto; }
+
+    /* 🌐 Ajustes mobile finais */
+    @media (max-width: 768px) {
+      .fab {
+        bottom: 1rem;
+        right: 1rem;
+        width: 54px;
+        height: 54px;
+        font-size: 1.8rem;
+        line-height: 54px;
+      }
+
+      #header-inovadanca img {
+        height: 36px;
+      }
+
+      #header-inovadanca h5 {
+        font-size: 1rem;
+      }
+
+      .modal-dialog {
+        margin: 0.5rem;
+      }
+
+      .fc-toolbar-title {
+        font-size: 1.1rem !important;
+      }
+
+      .fc-button {
+        padding: 0.25rem 0.4rem !important;
+        font-size: 0.85rem !important;
+      }
+
+      .fc-timegrid-slot-label {
+        font-size: 0.7rem !important;
+      }
+    }
+  </style>
+
+  {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+
+  <!-- ✅ Header InovaDança -->
+  <header class="navbar navbar-light bg-white shadow-sm px-3 py-2 mb-4" style="border-radius:0 0 12px 12px;">
+    <div class="container-fluid d-flex justify-content-between align-items-center">
+
+      <!-- Logo + título -->
+      <div class="d-flex align-items-center">
+        <img src="{% static 'img/inovadanca_logo.png' %}" alt="InovaDança" height="42" class="me-2">
+        <span class="fw-bold text-primary fs-5">InovaDança</span>
+      </div>
+
+      <!-- Usuário e menu -->
+      <div class="dropdown">
+        <a class="d-flex align-items-center text-decoration-none dropdown-toggle" href="#" role="button"
+           id="dropdownUser" data-bs-toggle="dropdown" aria-expanded="false">
+
+          <!-- 👤 FOTO OU ÍCONE -->
+          {% if user.profile.photo %}
+            <img src="{{ user.profile.photo.url }}"
+                 alt="Foto de {{ user.username }}"
+                 class="rounded-circle shadow-sm me-2"
+                 style="width:40px; height:40px; object-fit:cover; border:2px solid #0BAFEE;">
+          {% else %}
+            <div class="d-flex justify-content-center align-items-center bg-light text-secondary rounded-circle me-2 shadow-sm"
+                 style="width:40px; height:40px; border:2px solid #ccc;">
+              <i class="bi bi-person-fill fs-4"></i>
+            </div>
+          {% endif %}
+
+          <span class="fw-semibold text-dark small">
+            {{ user.first_name|default:user.username }}
+          </span>
+        </a>
+
+        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" aria-labelledby="dropdownUser">
+          <li><a class="dropdown-item" href="{% url 'home' %}">
+            <i class="bi bi-house-door me-2"></i> Início
+          </a></li>
+        
+          {% if user.is_superuser or user.profile.role == 'admin' or user.profile.role == 'secretario' %}
+            <li><a class="dropdown-item" href="{% url 'admin_panel' %}">
+              <i class="bi bi-gear-fill me-2"></i> Painel Administrativo
+            </a></li>
+            <li><a class="dropdown-item" href="{% url 'admin_agenda' %}">
+              <i class="bi bi-calendar-week me-2"></i> Agenda Geral
+            </a></li>
+            <li><a class="dropdown-item" href="{% url 'admin_grade' %}">
+              <i class="bi bi-grid-3x3-gap-fill me-2"></i> Grade Fixa
+            </a></li>
+            <li><hr class="dropdown-divider"></li>
+          {% endif %}
+        
+          <li><a class="dropdown-item" href="{% url 'profile' %}">
+            <i class="bi bi-person-circle me-2"></i> Meu Perfil
+          </a></li>
+        
+          <li><a class="dropdown-item text-danger" href="{% url 'logout' %}">
+            <i class="bi bi-box-arrow-right me-2"></i> Sair
+          </a></li>
+        </ul>
+      </div>
+    </div>
+  </header>
+  
+
+  <main class="content-container container">
+    {% block content %}{% endblock %}
+    {% block modal %}{% endblock %}
+  </main>
+
+  <footer class="text-center text-muted py-3">
+    © InovaDança — agendamento de salas
+  </footer>
+
+  <!-- ✅ FullCalendar -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+
+  <!-- ✅ Bootstrap Bundle SEM integrity -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  {% block extra_js %}{% endblock %}
+
+</body>
+</html>

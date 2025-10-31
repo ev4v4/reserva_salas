@@ -1,0 +1,247 @@
+{% extends "reservas/base_inovadanca.html" %}
+{% load static %}
+
+{% block title %}Painel Administrativo — InovaDança{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <!-- TÍTULO -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold text-primary mb-0">
+      <i class="bi bi-gear-fill me-2"></i>Painel Administrativo
+    </h3>
+    <a href="{% url 'home' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i> Voltar à Agenda
+    </a>
+  </div>
+
+  <div class="row g-4 align-items-start">
+
+    <!-- 🧑‍💼 COLUNA ESQUERDA — Usuários -->
+    <div class="col-12 col-lg-5">
+      <div class="card shadow border-0 p-4" style="border-radius:18px;">
+        <h5 class="fw-bold text-primary mb-3">
+          <i class="bi bi-people-fill me-1"></i> Gerenciar Usuários
+        </h5>
+
+        <!-- FORMULÁRIO DE CRIAÇÃO -->
+        <form method="post" class="mb-4">
+          {% csrf_token %}
+          <input type="hidden" name="create_user" value="1">
+
+          <div class="mb-2">
+            <label class="form-label fw-semibold">Nome de Usuário</label>
+            <input type="text" name="username" class="form-control" required>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label">Nome</label>
+            <input type="text" name="first_name" class="form-control" placeholder="Nome do usuário">
+          </div>
+          
+          <div class="mb-2">
+            <label class="form-label">Sobrenome</label>
+            <input type="text" name="last_name" class="form-control" placeholder="Sobrenome">
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label fw-semibold">E-mail</label>
+            <input type="email" name="email" class="form-control" placeholder="opcional">
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label fw-semibold">Senha</label>
+            <input type="password" name="password" class="form-control" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Função</label>
+            <select name="role" class="form-select">
+              <option value="professor">Professor</option>
+              <option value="secretario">Secretário</option>
+              <option value="admin">Administrador</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100 rounded-pill">
+            <i class="bi bi-person-plus"></i> Criar Usuário
+          </button>
+        </form>
+
+        <!-- LISTAGEM DE USUÁRIOS -->
+        <h6 class="fw-bold text-secondary mb-2">Usuários Cadastrados</h6>
+        <div class="list-group small shadow-sm">
+          {% for u in usuarios %}
+            <div class="list-group-item d-flex justify-content-between align-items-center border-0 border-bottom">
+              <div>
+                <strong>{{ u.user.get_full_name|default:u.user.username }}</strong>
+                <small class="text-muted d-block">{{ u.get_role_display }}</small>
+              </div>
+
+              <div class="d-flex gap-1">
+                {% if user.is_superuser or user.profile.role == 'admin' %}
+                <!-- ✏️ Botão editar -->
+                <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editarUsuarioModal{{ u.user.id }}">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <!-- ❌ Botão excluir -->
+                <form method="post" class="m-0">
+                  {% csrf_token %}
+                  <input type="hidden" name="user_id" value="{{ u.user.id }}">
+                  <button type="submit" name="delete_user" class="btn btn-sm btn-outline-danger rounded-pill">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- ✏️ Modal de edição de usuário -->
+            <div class="modal fade" id="editarUsuarioModal{{ u.user.id }}" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog">
+                <div class="modal-content border-0 shadow">
+                  <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Editar {{ u.user.get_full_name|default:u.user.username }}</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                  </div>
+                  <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="user_id" value="{{ u.user.id }}">
+                    <div class="modal-body">
+                      <div class="mb-3">
+                        <label class="form-label">Nome</label>
+                        <input type="text" class="form-control" name="first_name" value="{{ u.user.first_name }}">
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label">Sobrenome</label>
+                        <input type="text" class="form-control" name="last_name" value="{{ u.user.last_name }}">
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label">E-mail</label>
+                        <input type="email" class="form-control" name="email" value="{{ u.user.email }}">
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label">Função</label>
+                        <select class="form-select" name="role">
+                          <option value="professor" {% if u.role == 'professor' %}selected{% endif %}>Professor</option>
+                          <option value="secretario" {% if u.role == 'secretario' %}selected{% endif %}>Secretário</option>
+                          <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Administrador</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                      <button type="submit" name="edit_user" class="btn btn-primary">Salvar alterações</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          {% empty %}
+            <div class="text-muted small py-2 px-1">Nenhum usuário cadastrado.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- 📢 COLUNA DIREITA — Avisos -->
+    <div class="col-12 col-lg-7">
+      <div class="card shadow border-0 p-4" style="border-radius:18px;">
+        <h5 class="fw-bold text-primary mb-3">
+          <i class="bi bi-megaphone-fill me-1"></i> Publicar Avisos
+        </h5>
+
+        <!-- FORM DE PUBLICAÇÃO -->
+        <form method="post" enctype="multipart/form-data" class="mb-4">
+          {% csrf_token %}
+          <input type="hidden" name="publicar_aviso" value="1">
+
+          <div class="mb-2">
+            <label class="form-label fw-semibold">Tipo de Aviso</label>
+            <select name="tipo" id="tipoAviso" class="form-select">
+              <option value="texto">Texto</option>
+              <option value="imagem">Imagem</option>
+            </select>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label fw-semibold">Título</label>
+            <input type="text" name="titulo" class="form-control" required>
+          </div>
+
+          <div class="mb-2 aviso-texto">
+            <label class="form-label fw-semibold">Mensagem</label>
+            <textarea name="corpo" class="form-control" rows="3" placeholder="Digite o texto do aviso..."></textarea>
+          </div>
+
+          <div class="mb-2 aviso-imagem" style="display:none;">
+            <label class="form-label fw-semibold">Imagem</label>
+            <input type="file" name="imagem" accept="image/*" class="form-control">
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100 rounded-pill">
+            <i class="bi bi-upload"></i> Publicar Aviso
+          </button>
+        </form>
+
+        <!-- LISTAGEM DE AVISOS -->
+        <h6 class="fw-bold text-secondary mb-2">Avisos Recentes</h6>
+        <div class="list-group small shadow-sm">
+          {% for aviso in avisos %}
+            <div class="list-group-item border-0 border-bottom pb-3">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <strong>{{ aviso.titulo }}</strong>
+                  <small class="text-muted d-block">{{ aviso.criado_em|date:"d/m/Y H:i" }}</small>
+
+                  {% if aviso.tipo == 'texto' %}
+                    <p class="mt-2 mb-1 text-muted small">{{ aviso.corpo|linebreaksbr }}</p>
+                  {% else %}
+                    <img src="{{ aviso.imagem.url }}" class="img-fluid rounded mt-2 shadow-sm" style="max-height:160px; object-fit:cover;">
+                  {% endif %}
+                </div>
+
+                {% if user.is_superuser or user.profile.role == 'admin' %}
+                <form method="post" class="ms-2">
+                  {% csrf_token %}
+                  <input type="hidden" name="aviso_id" value="{{ aviso.id }}">
+                  <button type="submit" name="delete_notice" class="btn btn-sm btn-outline-danger rounded-pill">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+                {% endif %}
+              </div>
+            </div>
+          {% empty %}
+            <div class="text-muted small py-2 px-1">Nenhum aviso publicado.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- JS: alterna entre aviso texto e imagem -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const tipoSelect = document.getElementById('tipoAviso');
+  const blocoTexto = document.querySelector('.aviso-texto');
+  const blocoImagem = document.querySelector('.aviso-imagem');
+
+  function toggleAvisoFields() {
+    if (tipoSelect.value === 'imagem') {
+      blocoTexto.style.display = 'none';
+      blocoImagem.style.display = '';
+    } else {
+      blocoTexto.style.display = '';
+      blocoImagem.style.display = 'none';
+    }
+  }
+
+  tipoSelect.addEventListener('change', toggleAvisoFields);
+  toggleAvisoFields();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,457 @@
+{% extends "reservas/base_inovadanca.html" %}
+{% load static %}
+
+{% block title %}Admin — Grade Fixa{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="fw-bold text-info m-0">📚 Grade Fixa de Aulas</h4>
+
+  <button class="btn btn-primary btn-sm"
+          data-bs-toggle="modal"
+          data-bs-target="#modalCreateClass">
+    ➕ Nova Aula Fixa
+  </button>
+</div>
+
+<div class="table-responsive shadow-sm">
+  <table class="table table-bordered align-middle">
+    <thead class="table-light text-center">
+      <tr>
+        <th>Sala</th>
+        <th>Aula</th>
+        <th>Professor</th>
+        <th>Dia</th>
+        <th>Horário</th>
+        <th>Status</th>
+        <th style="width:150px;">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for sc in classes %}
+      <tr class="text-center">
+        <td>{{ sc.room.name }}</td>
+        <td>{{ sc.title }}</td>
+        <td>{{ sc.user.get_full_name|default:sc.user.username }}</td>
+        <td>
+          {% with sc.weekday as wd %}
+            {% if wd == 0 %}Segunda{% elif wd == 1 %}Terça{% elif wd == 2 %}Quarta{% elif wd == 3 %}Quinta{% elif wd == 4 %}Sexta{% elif wd == 5 %}Sábado{% elif wd == 6 %}Domingo{% endif %}
+          {% endwith %}
+        </td>
+        <td>{{ sc.start_time|time:"H:i" }} — {{ sc.end_time|time:"H:i" }}</td>
+        <td>
+          {% if sc.is_active %}
+            <span class="badge bg-success">Ativa</span>
+          {% else %}
+            <span class="badge bg-secondary">Inativa</span>
+          {% endif %}
+        </td>
+        <td class="text-center">
+          <button class="btn btn-warning btn-sm me-1"
+            onclick="editClass('{{sc.id}}','{{sc.room.slug}}','{{sc.user.id}}','{{sc.weekday}}','{{sc.start_time|time:"H:i"}}','{{ sc.end_time|time:"H:i" }}','{{sc.title|escapejs}}')">
+            ✏️ Editar
+          </button>
+
+          <form action="{% url 'admin_grade_toggle' %}" method="post" class="d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="id" value="{{ sc.id }}">
+            <button class="btn btn-outline-secondary btn-sm" type="submit">
+              {{ sc.is_active|yesno:"Desativar,Ativar" }}
+            </button>
+          </form>
+
+          <form action="{% url 'admin_grade_delete' %}" method="post" class="d-inline" onsubmit="return confirm('Excluir esta aula fixa?');">
+            {% csrf_token %}
+            <input type="hidden" name="id" value="{{ sc.id }}">
+            <button class="btn btn-danger btn-sm" type="submit">🗑</button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" class="text-center text-muted">Nenhuma aula fixa cadastrada.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block modal %}
+<!-- Modal: Nova Aula Fixa -->
+<div class="modal fade" id="modalCreateClass" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="frmCreateClass" method="post" action="{% url 'admin_grade_create' %}">
+      {% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Adicionar Aula Fixa</h5>
+          <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="mb-2">
+            <label class="form-label">Sala</label>
+            <select name="room" class="form-select" required>
+              <option value="">Selecione</option>
+              {% for r in rooms %}
+              <option value="{{ r.slug }}">{{ r.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label">Professor</label>
+            <select name="user" class="form-select" required>
+              <option value="">Selecione</option>
+              {% for t in users %}
+              <option value="{{ t.id }}">{{ t.get_full_name|default:t.username }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Checkboxes por dia -->
+          <div class="mb-2">
+            <label class="form-label d-block">Dias da Semana</label>
+            <div class="d-flex flex-wrap gap-2">
+              {% for v,label in WEEKDAY_CHOICES %}
+              <div class="form-check me-3">
+                <input class="form-check-input" type="checkbox" name="weekday" value="{{ v }}" id="wd_new_{{v}}">
+                <label class="form-check-label" for="wd_new_{{v}}">{{ label }}</label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label">Hora de Início</label>
+            <input type="time" name="start" class="form-control" required>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label">Duração (min)</label>
+            <input type="number" name="duration" class="form-control" min="30" step="30" value="60" required>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label">Título da Aula</label>
+            <input type="text" name="title" class="form-control" placeholder="Ex: Zouk Intermediário">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-primary" type="submit">Salvar</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Editar Aula Fixa -->
+<div class="modal fade" id="modalEditClass" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="frmEditClass" method="post" action="{% url 'admin_grade_update' %}">
+      {% csrf_token %}
+      <input type="hidden" name="id" id="edit_id">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Editar Aula Fixa</h5>
+          <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="mb-2">
+            <label class="form-label">Título</label>
+            <input class="form-control" name="title" id="edit_title">
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label">Sala</label>
+            <select class="form-select" name="room" id="edit_room">
+              {% for r in rooms %}
+              <option value="{{ r.slug }}">{{ r.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label">Professor</label>
+            <select class="form-select" name="user" id="edit_user">
+              {% for u in users %}
+              <option value="{{ u.id }}">{{ u.get_full_name|default:u.username }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label d-block">Dias da Semana</label>
+            <div class="d-flex flex-wrap gap-2">
+              {% for v,label in WEEKDAY_CHOICES %}
+              <div class="form-check me-3">
+                <input class="form-check-input" type="checkbox" name="weekday" value="{{ v }}" id="wd_edit_{{v}}">
+                <label class="form-check-label" for="wd_edit_{{v}}">{{ label }}</label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label">Hora de Início</label>
+            <input type="time" class="form-control" name="start" id="edit_start">
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label">Duração (min)</label>
+            <input type="number" class="form-control" name="duration" id="edit_duration" min="30" step="30" value="60">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-primary" type="submit">Salvar alterações</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Alternativas de Horário (conflitos) -->
+<div class="modal fade" id="modalAlternatives" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Conflito encontrado</h5>
+        <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-2">Já existe aula neste(s) dia(s)/horário(s). Escolha uma alternativa abaixo:</p>
+        <div id="altContainer"></div>
+        <small class="text-muted d-block mt-2">Ao selecionar uma alternativa, vamos ajustar o formulário pra você salvar novamente.</small>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container (iOS style) -->
+<div id="toastArea" class="toast-area"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ========= Helpers ========= */
+function showToast(msg, type="info") {
+  // type: success | info | warning | error
+  const area = document.getElementById('toastArea');
+  const t = document.createElement('div');
+  t.className = `toast-ios toast-${type}`;
+  t.innerHTML = `<div class="toast-msg">${msg}</div>`;
+  area.appendChild(t);
+  setTimeout(()=> t.classList.add('show'), 10);
+  setTimeout(()=> {
+    t.classList.remove('show');
+    setTimeout(()=> t.remove(), 200);
+  }, 3000);
+}
+
+function editClass(id, room, user, weekday, start, end, title) {
+  const toMin = (hhmm) => { const [h,m]=String(hhmm).split(':').map(Number); return h*60+m; };
+  const dur = Math.max(30, toMin(end) - toMin(start));
+
+  document.getElementById('edit_id').value = id;
+  document.getElementById('edit_room').value = room;
+  document.getElementById('edit_user').value = user;
+  document.getElementById('edit_start').value = start;
+  document.getElementById('edit_duration').value = dur;
+  document.getElementById('edit_title').value = title;
+
+  // marca apenas o dia atual
+  document.querySelector('#modalCreateClass form').addEventListener('submit', function(e){
+  e.preventDefault();
+
+  const form = e.target;
+  const data = new FormData(form);
+
+  fetch(form.action, {
+    method: "POST",
+    body: data
+  })
+  .then(r => r.json())
+  .then(res => {
+    if(res.status === "ok"){
+      showToast("✅ Aula criada com sucesso!", "success");
+      setTimeout(()=>location.reload(), 500);
+    }
+    else if(res.status === "conflict"){
+      showToast("⚠ Conflito detectado! Selecione outro horário.", "warning");
+    }
+    else {
+      showToast("❌ " + (res.msg || "Erro ao criar aula"), "danger");
+    }
+  });
+});
+
+  new bootstrap.Modal(document.getElementById('modalEditClass')).show();
+}
+
+/* ========= AJAX create ========= */
+document.getElementById('frmCreateClass').addEventListener('submit', function(e){
+  e.preventDefault();
+  const form = e.target;
+  const url = form.getAttribute('action');
+  const fd = new FormData(form);
+
+  fetch(url, {
+    method: 'POST',
+    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    body: fd
+  }).then(async (r)=>{
+    const data = await r.json().catch(()=> ({}));
+    if (r.ok && data.ok) {
+      showToast('Aula(s) criada(s) com sucesso!', 'success');
+      // fecha modal e recarrega lista
+      bootstrap.Modal.getInstance(document.getElementById('modalCreateClass')).hide();
+      setTimeout(()=> location.reload(), 600);
+    } else {
+      // conflito ou erro
+      if (r.status === 409 && data.conflicts) {
+        buildAlternativesUI('create', data.conflicts, form);
+        new bootstrap.Modal(document.getElementById('modalAlternatives')).show();
+        showToast('Conflito encontrado. Escolha uma alternativa.', 'warning');
+      } else {
+        showToast(data.error || 'Erro ao salvar.', 'error');
+      }
+    }
+  }).catch(()=>{
+    showToast('Falha de comunicação.', 'error');
+  });
+});
+
+/* ========= AJAX update ========= */
+document.getElementById('frmEditClass').addEventListener('submit', function(e){
+  e.preventDefault();
+  const form = e.target;
+  const url = form.getAttribute('action');
+  const fd = new FormData(form);
+
+  fetch(url, {
+    method: 'POST',
+    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    body: fd
+  }).then(async (r)=>{
+    const data = await r.json().catch(()=> ({}));
+    if (r.ok && data.ok) {
+      showToast('Aula atualizada!', 'success');
+      bootstrap.Modal.getInstance(document.getElementById('modalEditClass')).hide();
+      setTimeout(()=> location.reload(), 600);
+    } else {
+      if (r.status === 409 && data.conflicts) {
+        buildAlternativesUI('edit', data.conflicts, form);
+        new bootstrap.Modal(document.getElementById('modalAlternatives')).show();
+        showToast('Conflito encontrado. Escolha uma alternativa.', 'warning');
+      } else {
+        showToast(data.error || 'Erro ao atualizar.', 'error');
+      }
+    }
+  }).catch(()=>{
+    showToast('Falha de comunicação.', 'error');
+  });
+});
+
+/* ========= Alternatives UI ========= */
+function buildAlternativesUI(mode, conflicts, formEl){
+  const wrap = document.getElementById('altContainer');
+  wrap.innerHTML = '';
+
+  conflicts.forEach(block=>{
+    const section = document.createElement('div');
+    section.className = 'mb-3';
+
+    const title = document.createElement('div');
+    title.className = 'fw-semibold mb-2';
+    title.textContent = `${block.weekday_label} — alternativas:`;
+    section.appendChild(title);
+
+    const row = document.createElement('div');
+    row.className = 'd-flex flex-wrap gap-2';
+    if (block.alternatives && block.alternatives.length){
+      block.alternatives.forEach(alt=>{
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'chip';
+        btn.textContent = alt.label;
+        btn.onclick = ()=>{
+          // Ajusta formulário:
+          // - marca apenas o weekday correspondente
+          formEl.querySelectorAll('input[name="weekday"]').forEach(cb=>{
+            cb.checked = (String(cb.value) === String(alt.weekday));
+          });
+          // - ajusta hora de início
+          const startInput = formEl.querySelector('input[name="start"]');
+          if (startInput) startInput.value = alt.start;
+
+          // Fecha modal e avisa
+          bootstrap.Modal.getInstance(document.getElementById('modalAlternatives')).hide();
+          showToast('Alternativa selecionada. Clique em Salvar.', 'info');
+        };
+        row.appendChild(btn);
+      });
+    } else {
+      const empty = document.createElement('div');
+      empty.className = 'text-muted small';
+      empty.textContent = 'Nenhuma alternativa próxima encontrada.';
+      row.appendChild(empty);
+    }
+
+    section.appendChild(row);
+    wrap.appendChild(section);
+  });
+}
+</script>
+
+<style>
+/* iOS-like Toasts */
+.toast-area{
+  position: fixed;
+  top: 12px;
+  left: 0; right: 0;
+  display:flex; flex-direction:column; align-items:center; gap:10px;
+  z-index: 1080;
+  pointer-events: none;
+}
+.toast-ios{
+  opacity:0; transform: translateY(-6px);
+  background: rgba(255,255,255,.95);
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 14px;
+  box-shadow: 0 8px 30px rgba(0,0,0,.08);
+  padding: 10px 14px;
+  min-width: 260px;
+  max-width: 90vw;
+  text-align:center;
+  pointer-events:auto;
+  transition: all .18s ease;
+  font-weight: 600;
+}
+.toast-ios.show{ opacity:1; transform: translateY(0); }
+.toast-ios .toast-msg{ color:#111; }
+.toast-success{ border-color: rgba(11,172,80,.25); }
+.toast-warning{ border-color: rgba(242,183,5,.35); }
+.toast-error{ border-color: rgba(230,51,59,.35); }
+
+/* Chips de alternativas */
+.chip{
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.chip:hover{ background:#f7f7f7; }
+
+/* Melhorias visuais leves */
+.table td, .table th { vertical-align: middle; }
+</style>
+{% endblock %}

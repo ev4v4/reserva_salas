@@ -1,0 +1,79 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InovaDança</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Ícones -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        body {
+            background: #f9f9f9;
+        }
+        .navbar-custom {
+            background: #0064C8; /* Azul Inova */
+        }
+        .navbar-brand {
+            font-weight: bold;
+            color: #fff;
+            font-size: 1.4rem;
+        }
+        .navbar-brand span {
+            font-weight: normal;
+        }
+        .content-container {
+            margin-top: 70px;
+        }
+        .fab {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: #0064C8;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            cursor: pointer;
+            z-index: 999;
+        }
+        .fab:hover {
+            background: #004E9B;
+        }
+    </style>
+
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-custom fixed-top">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">Inova<strong>Dança</strong></a>
+
+        <div class="ms-auto">
+            <a href="/profile/" class="btn btn-outline-light btn-sm me-2">
+                <i class="bi bi-person-circle"></i> Perfil
+            </a>
+            <a href="/logout/" class="btn btn-light btn-sm text-danger">
+                <i class="bi bi-box-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+</nav>
+
+<div class="content-container container-fluid">
+    {% block content %}
+    {% endblock %}
+</div>
+
+</body>
+</html>

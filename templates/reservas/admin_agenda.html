@@ -1,0 +1,196 @@
+{% extends "reservas/base_inovadanca.html" %}
+{% load static %}
+
+{% block title %}Admin — Agenda{% endblock %}
+
+{% block content %}
+<div class="admin-header d-flex justify-content-between align-items-center mb-3 mt-2">
+  <h4 class="text-info fw-bold m-0">📊 Administração da Agenda</h4>
+</div>
+
+<!-- 🎛️ Filtros -->
+<div class="card p-3 shadow-sm mb-3">
+  <div class="row g-3 align-items-center justify-content-center">
+    <div class="col-md-4">
+      <label class="form-label">Professor / Usuário</label>
+      <select id="filtro_user" class="form-select">
+        <option value="all">Todos</option>
+        {% for u in users %}
+          <option value="{{ u.id }}">{{ u.get_full_name|default:u.username }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Sala</label>
+      <select id="filtro_room" class="form-select">
+        <option value="">Todas</option>
+        {% for r in rooms %}
+          <option value="{{ r.slug }}">{{ r.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-4 text-end">
+      <button class="btn btn-outline-info mt-1" id="printAgendaBtn">🖨 Exportar</button>
+    </div>
+  </div>
+</div>
+
+<div id="calendar"></div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function(){
+  
+    var calendarEl = document.getElementById('calendar');
+    var filtroUser = document.getElementById('filtro_user');
+    var filtroRoom = document.getElementById('filtro_room');
+    var printBtn = document.getElementById("printAgendaBtn");
+  
+    var selectedEvents = new Set();
+  
+    // ✅ Inicializa o calendário
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+      locale: "pt-br",
+      initialView: 'timeGridWeek',
+      nowIndicator: true,
+      allDaySlot: false,
+      slotMinTime: "00:00:00",
+      slotMaxTime: "24:00:00",
+      expandRows: true,
+      height: "auto",
+  
+      headerToolbar:{
+        left:"prev,next today",
+        center:"title",
+        right:"timeGridWeek,timeGridDay"
+      },
+  
+      titleFormat: { month: 'long', year: 'numeric' },
+  
+      eventClick: function(info){
+        info.jsEvent.preventDefault();
+        var id = info.event.id;
+        if (selectedEvents.has(id)) {
+          selectedEvents.delete(id);
+          info.event.removeClassNames(["selected-event"]);
+        } else {
+          selectedEvents.add(id);
+          info.event.addClassNames(["selected-event"]);
+        }
+      },
+  
+      eventContent: function(arg){
+        const isFixedClass = arg.event.extendedProps.type === "scheduled_class";
+        const title = arg.event.title;
+        const teacher = arg.event.extendedProps.teacher_name;
+  
+        const container = document.createElement("div");
+        container.style.fontSize = "0.78rem";
+        container.style.fontWeight = "600";
+        container.style.lineHeight = "1.1";
+  
+        if (isFixedClass) {
+          container.innerHTML = `
+            <div>${title}</div>
+            <small style="opacity:.9">Prof: ${teacher}</small>
+          `;
+        } else {
+          container.textContent = title;
+        }
+        return { domNodes: [container] };
+      },
+  
+      events: function(info, success, failure){
+        var p = new URLSearchParams();
+        p.set("start", info.startStr);
+        p.set("end", info.endStr);
+        if(filtroUser.value !== 'all') p.set("user", filtroUser.value);
+        if(filtroRoom.value) p.set("room", filtroRoom.value);
+  
+        fetch("/api/admin-events/?" + p.toString())
+          .then(r => r.json())
+          .then(data => {
+            selectedEvents.clear();
+            data.forEach(ev => ev.display = "block");
+            success(data);
+          })
+          .catch(failure);
+      }
+    });
+  
+    calendar.render();
+  
+    // ✅ Corrige o botão de impressão
+    printBtn.addEventListener("click", () => {
+      const currentView = calendar.view.type;
+      if (currentView !== "timeGridWeek") {
+        calendar.changeView("timeGridWeek");
+        setTimeout(() => window.print(), 600);
+      } else {
+        window.print();
+      }
+    });
+  
+    filtroUser.onchange = () => calendar.refetchEvents();
+    filtroRoom.onchange = () => calendar.refetchEvents();
+  
+  })();
+  </script>
+
+<style>
+  @media print {
+    /* Oculta tudo que não é o calendário */
+    body * {
+      visibility: hidden;
+    }
+  
+    #calendar, #calendar * {
+      visibility: visible;
+    }
+  
+    #calendar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+    }
+  
+    /* Força o calendário a caber certinho */
+    .fc {
+      font-size: 11px !important;
+    }
+  
+    /* Mostra semana inteira — modo compactado */
+    .fc-timeGridWeek-view .fc-scroller {
+      overflow: visible !important;
+      height: auto !important;
+    }
+  
+    /* Remove fundo cinza ou áreas brancas feias */
+    body {
+      background: white !important;
+    }
+  
+    /* Tira as barras de controle do FullCalendar */
+    .fc-header-toolbar, .admin-header, .card {
+      display: none !important;
+    }
+  
+    /* Adiciona título bonito na impressão */
+    #calendar::before {
+      content: "Agenda Semanal - Inovadança";
+      display: block;
+      font-size: 18px;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+  }
+  </style>
+  
+
+{% endblock %}

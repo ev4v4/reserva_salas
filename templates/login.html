@@ -1,0 +1,111 @@
+{% extends 'reservas/base_inovadanca.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+  /* Remove o header e o footer */
+  header.navbar, footer {
+    display: none !important;
+  }
+
+  /* Fundo degradê ocupando toda a tela */
+  body {
+    background: linear-gradient(135deg, #0BAFEE 0%, #6C63FF 100%) !important;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* Remove o comportamento padrão da base */
+  main.content-container {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Card de login */
+  .login-card {
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    padding: 2.5rem 2rem;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    animation: fadeIn 0.6s ease;
+  }
+
+  .login-card img {
+    width: 110px;
+    margin-bottom: 1rem;
+  }
+
+  .login-card h3 {
+    color: #0BAFEE;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+  }
+
+  .login-card .form-control {
+    border-radius: 12px;
+    padding: 0.75rem;
+  }
+
+  .login-card .btn-primary {
+    background-color: #0BAFEE;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    padding: 0.75rem;
+    transition: all 0.3s;
+  }
+
+  .login-card .btn-primary:hover {
+    background-color: #099cd2;
+    transform: translateY(-2px);
+  }
+
+  .login-card a {
+    color: #0BAFEE;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+
+<div class="login-card">
+  <img src="{% static 'img/inovadanca_logo.png' %}" alt="InovaDança">
+  <h3>Bem-vindo(a)</h3>
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-3 text-start">
+      <label class="form-label fw-semibold">Usuário</label>
+      <input class="form-control" type="text" name="username" required>
+    </div>
+    <div class="mb-3 text-start">
+      <label class="form-label fw-semibold">Senha</label>
+      <input class="form-control" type="password" name="password" required>
+    </div>
+    <button class="btn btn-primary w-100">Entrar</button>
+
+    <!-- ✅ Link de recuperação de senha -->
+    <div class="text-center mt-3">
+      <a href="{% url 'password_reset' %}" class="text-decoration-none small">
+        Esqueceu sua senha?
+      </a>
+    </div>
+  </form>
+</div>
+{% endblock %}

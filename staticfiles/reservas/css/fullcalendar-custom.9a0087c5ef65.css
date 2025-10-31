@@ -1,0 +1,241 @@
+/* ===== InovaDança Theme ===== */
+:root {
+    --primary: #0BAFEE;
+    --primary-dark: #0890c2;
+    --bg-dark: #0f1115;
+    --bg-light: #ffffff;
+    --text: #222;
+    --rounded: 10px;
+}
+
+/* NAV / HEADER */
+.navbar {
+    background: var(--primary) !important;
+    border-bottom: 3px solid var(--primary-dark);
+}
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.3rem;
+    color: white !important;
+}
+
+/* Body clean */
+body {
+    background: #eef3f7;
+}
+
+/* Sidebar */
+.p-3.border.rounded {
+    background: #fff;
+    border-radius: var(--rounded);
+    border: none !important;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+}
+
+/* FAB Button */
+.fab {
+    position: fixed;
+    bottom: 25px;
+    right: 25px;
+    background: var(--primary);
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    font-size: 32px;
+    line-height: 52px;
+    text-align: center;
+    cursor: pointer;
+    color: #fff;
+    box-shadow: 0 6px 14px rgba(0,0,0,.18);
+    transition: 0.2s;
+}
+.fab:hover {
+    background: var(--primary-dark);
+}
+
+/* FullCalendar Modern */
+.fc {
+    .fc-theme-standard td,
+    .fc-theme-standard th {
+    border-color: rgba(11,175,238,0.25) !important; /* azul leve */
+    border-width: 1px !important;
+    background: #fff;
+    border-radius: var(--rounded);
+    padding: 6px;
+    box-shadow: 0 2px 14px rgba(0,0,0,0.08);
+}
+
+.fc-toolbar-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.fc-timegrid-slot {
+    height: 45px !important;
+}
+
+.fc-button {
+    background: var(--primary) !important;
+    border: none !important;
+    border-radius: var(--rounded);
+}
+.fc-button:hover {
+    background: var(--primary-dark) !important;
+}
+
+/* Colunas da semana */
+.fc-col-header-cell {
+    background: #f4f8fb;
+    font-weight: 600;
+}
+
+/* NOW Indicator */
+.fc-timegrid-now-indicator-arrow,
+.fc-timegrid-now-indicator-line {
+    border-color: var(--primary) !important;
+}
+
+/* Eventos: arredondados e bonitos */
+.fc-event {
+    border-radius: 8px !important;
+    padding: 3px 6px;
+    font-size: 0.82rem;
+    border: none !important;
+    opacity: 0.92;
+    transition: 0.15s;
+}
+.fc-event:hover {
+    opacity: 1;
+    transform: scale(1.03);
+}
+
+/* Seu evento */
+.fc-event.mine {
+    background: var(--primary) !important;
+    color: #fff !important;
+    font-weight: bold;
+    box-shadow: 0 0 10px rgba(11,175,238,.42);
+}
+
+/* Cores por sala - Gradiente suave */
+.fc-event.sala-1 {
+    background: linear-gradient(135deg, #0BAFEE, #00a2d8) !important;
+    color: #fff;
+}
+.fc-event.sala-2 {
+    background: linear-gradient(135deg, #f94144, #cc2f37) !important;
+    color: #fff;
+}
+.fc-event.sala-3 {
+    background: linear-gradient(135deg, #f9c80e, #e0b208) !important;
+    color: #222;
+}
+/* --- Navbar --- */
+.navbar-custom {
+    background: #0BAFEE !important;
+    height: 48px;
+    padding: 4px 12px !important;
+  }
+  .navbar-custom .navbar-brand span {
+    font-weight: 600;
+    color: #fff;
+  }
+  .navbar-custom .btn-sm {
+    font-weight: 600;
+  }
+  
+  /* Fundo geral da aplicação */
+  body {
+    background: #f5f7fa !important;
+  }
+  
+  /* Containers principais */
+  .container, .container-fluid {
+    padding-top: 60px !important;
+  }
+  
+  /* Cards (Filtros Admin e Sidebar) */
+  .card {
+    background: #fff !important;
+    border-radius: 10px !important;
+    border: 1px solid #d8d8d8 !important;
+  }
+  
+  /* Inputs */
+  .form-select, .form-control {
+    color: #000 !important;
+    background: #fff !important;
+  }
+  
+  /* ---------- FULLCALENDAR BEAUTY MODE 🔥 ---------- */
+  
+  /* Título */
+  .fc .fc-toolbar-title {
+    font-size: 1.3rem !important;
+    color: #0BAFEE !important;
+  }
+  
+  /* Bordas da grade */
+  .fc-theme-standard .fc-scrollgrid,
+  .fc-theme-standard td,
+  .fc-theme-standard th {
+    border-color: rgba(0,0,0,.15) !important;
+  }
+  .fc-col-header-cell-cushion {
+    font-weight: 600;
+    color: #111 !important;
+  }
+  .fc-timegrid-slot {
+    background: #fff;
+  }
+  .fc-timegrid-slot:nth-child(even) {
+    background: #fafafa;
+  }
+  
+  /* Eventos */
+  .fc-event {
+    border-radius: 8px !important;
+    border: none !important;
+    font-size: .85rem;
+    padding: 3px 4px !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,.18) !important;
+  }
+  
+  /* Cores das Salas */
+  .sala-1 {
+    background: #0BAFEE !important;
+    color: #fff !important;
+  }
+  .sala-2 {
+    background: #E7337A !important;
+    color: #fff !important;
+  }
+  .sala-3 {
+    background: #F2B705 !important;
+    color: #111 !important;
+  }
+  
+  /* Evento selecionado no admin */
+  .selected-event {
+    outline: 3px solid #0077CC !important;
+    filter: brightness(1.08);
+  }
+  
+  /* Hover nos eventos */
+  .fc-event:hover {
+    transform: scale(1.02);
+    filter: brightness(1.1);
+    transition: .15s ease;
+  }
+  
+  /* Now indicator */
+  .fc-timegrid-now-indicator-line {
+    border-color: #E7337A !important;
+  }
+  
+  /* Títulos dos dias */
+  .fc-col-header {
+    background: #fff !important;
+  }
+  

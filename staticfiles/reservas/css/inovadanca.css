@@ -1,0 +1,164 @@
+/* ===============================
+   🎨 Tema Inovadança — Cores & Layout
+   =============================== */
+
+   :root {
+    --inova-azul: #007bff;
+    --inova-azul-claro: #0BAFEE;
+    --inova-preto: #111;
+    --inova-branco: #fff;
+    --inova-cinza: #f8f9fa;
+  }
+  
+  /* ===== Corpo geral ===== */
+  body {
+    background-color: var(--inova-cinza);
+    color: var(--inova-preto);
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+  }
+  
+  /* ===== Cabeçalho ===== */
+  #header-inovadanca {
+    border-left: 5px solid var(--inova-azul);
+  }
+  
+  /* ===== Botões ===== */
+  .btn-primary {
+    background-color: var(--inova-azul);
+    border: none;
+    transition: 0.2s ease-in-out;
+  }
+  .btn-primary:hover {
+    background-color: var(--inova-azul-claro);
+    transform: translateY(-1px);
+  }
+  
+  /* ===== FAB Moderno (Floating Action Button) ===== */
+.fab {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: var(--inova-azul);
+  color: var(--inova-branco);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.8rem;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+  cursor: pointer;
+  z-index: 1000;
+  transition: all 0.25s ease-in-out;
+}
+.fab:hover {
+  transform: scale(1.08);
+  background: var(--inova-azul-claro);
+}
+.fab:active {
+  transform: scale(0.95);
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .fab {
+    bottom: 1rem;
+    right: 1rem;
+    width: 64px;
+    height: 64px;
+    font-size: 2rem;
+  }
+}
+
+  
+  /* ===== Eventos no calendário ===== */
+  .fc-event {
+    border-radius: 8px !important;
+    padding: 4px !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  }
+  
+  /* ===== Cartões e modais ===== */
+  .modal-content {
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  }
+
+  /* ===============================
+   📅 Calendário — Visual Moderno
+   =============================== */
+
+/* Container principal do calendário */
+#calendar {
+  background: var(--inova-branco);
+  border-radius: 16px;
+  padding: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+  border: 1px solid #e8e8e8;
+}
+
+/* Cada célula de horário */
+.fc-timegrid-slot {
+  border-color: #e9ecef !important;
+}
+
+/* Cabeçalho dos dias */
+.fc-col-header-cell {
+  background: var(--inova-azul);
+  color: white;
+  font-weight: 600;
+  border: none;
+}
+
+/* ===== Eventos ===== */
+.fc-event {
+  border-radius: 10px !important;
+  padding: 4px 6px !important;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+  border: none !important;
+  transition: transform 0.15s ease;
+}
+
+.fc-event:hover {
+  transform: scale(1.02);
+  box-shadow: 0 5px 10px rgba(0,0,0,0.25);
+}
+
+/* Aula fixa (cinza) */
+.fc-event.fixed-class {
+  background: #343a40 !important;
+  color: #fff !important;
+}
+
+/* Reserva (azul) */
+.fc-event:not(.fixed-class) {
+  background: var(--inova-azul) !important;
+  color: #fff !important;
+}
+
+/* ===== Modais ===== */
+.modal-content {
+  border-radius: 14px;
+  border: none;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.25);
+}
+
+.modal-header {
+  background-color: var(--inova-azul);
+  color: var(--inova-branco);
+  border-bottom: none;
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
+}
+
+.modal-title {
+  font-weight: 600;
+}
+
+.modal-footer {
+  border-top: none;
+}
+
+  
